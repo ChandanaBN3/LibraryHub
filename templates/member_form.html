@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, field with context %}
+{% set page_title = "Edit member" if editing else "Register member" %}
+{% block content %}
+<div class="page-head">
+  <div><div class="breadcrumb"><a href="{{ url_for('members') }}">Members</a> / {{ 'Edit' if editing else 'New' }}</div>
+    <h2>{{ "Edit " ~ member.full_name if editing else "Register a new member" }}</h2></div>
+</div>
+<div class="card">
+  <form method="post" novalidate>
+    {{ csrf() }}
+    <div class="form-grid">
+      {{ field("full_name", "Full name", form, errors, required=True, attrs='maxlength=100 autocomplete=off')|safe }}
+      {{ field("email", "Email", form, errors, type="email", required=True, attrs='maxlength=120 autocomplete=off')|safe }}
+      {{ field("phone", "Phone", form, errors, type="tel", hint="Digits, spaces, + and - only.", attrs='maxlength=20')|safe }}
+      {% if editing %}
+        {{ field("status", "Membership status", form, errors, kind="select", options=[("active", "Active"), ("inactive", "Inactive")])|safe }}
+        <div class="field"><span class="label">Member ID</span><div><strong>{{ member.id|member_code }}</strong> · registered {{ member.registered_on|dmy }}</div></div>
+      {% else %}
+        {{ field("registered_on", "Registration date", form, errors, type="date", required=True, attrs='max="' ~ today ~ '"')|safe }}
+      {% endif %}
+      <div class="full">{{ field("address", "Address", form, errors, kind="textarea", attrs='maxlength=250')|safe }}</div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ "Save changes" if editing else "Register member" }}</button>
+      <a class="btn secondary" href="{{ url_for('member_detail', member_id=member.id) if editing else url_for('members') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

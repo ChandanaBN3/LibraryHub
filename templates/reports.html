@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty_state with context %}
+{% set page_title = "Reports" %}
+{% block content %}
+<div class="page-head"><div><h2>Reports &amp; exports</h2><p>Preview a report on screen, then download it as a CSV file that opens in Excel.</p></div></div>
+<div class="tabs">
+  {% for key, label in names.items() %}<a href="{{ url_for('reports', report=key) }}" class="{{ 'active' if name == key }}">{{ label }}</a>{% endfor %}
+</div>
+
+<div class="card">
+  <form class="filters" method="get" data-no-loading style="margin-bottom:0">
+    <input type="hidden" name="report" value="{{ name }}">
+    {% if name == 'member_history' %}
+      <select name="member_id" required aria-label="Member">
+        <option value="">— Choose a member —</option>
+        {% for m in members_list %}<option value="{{ m.id }}" {{ 'selected' if member_id == m.id }}>{{ m.full_name }}</option>{% endfor %}
+      </select>
+    {% endif %}
+    {% if date_report %}
+      <label class="small muted" for="start">From</label><input type="date" id="start" name="start" value="{{ start }}">
+      <label class="small muted" for="end">To</label><input type="date" id="end" name="end" value="{{ end }}">
+    {% endif %}
+    {% if date_report or name == 'member_history' %}<button class="btn" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>{% endif %}
+    {% if not report.errors %}
+      <a class="btn secondary" style="margin-left:auto" href="{{ url_for('reports_export', **request.args.to_dict()) if request.args.get('report') else url_for('reports_export', report=name) }}"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card flush mt">
+  <div class="card-head"><h2>{{ report.title }}</h2></div>
+  {% if report.summary %}<div class="summary-chips" style="padding:0 1.25rem">{% for label, value in report.summary %}<span class="chip">{{ label }}<strong>{{ value }}</strong></span>{% endfor %}</div>{% endif %}
+  {% if report.errors %}
+    {{ empty_state("fa-circle-exclamation", "Cannot build this report yet", report.errors[0]) }}
+  {% elif report.rows %}
+    <div class="table-wrap"><table class="table">
+      <thead><tr>{% for h in report.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in preview_rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
+    {% if report.rows|length > preview_limit %}<div class="pagination"><span>Showing the first {{ preview_limit }} of {{ report.rows|length }} rows. The CSV export contains every row.</span></div>{% endif %}
+  {% else %}
+    {{ empty_state("fa-folder-open", "Nothing to report", "No records match this report and date range.") }}
+  {% endif %}
+</div>
+{% endblock %}

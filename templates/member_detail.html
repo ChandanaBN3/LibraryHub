@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import loan_badge, fine_badge, empty_state with context %}
+{% set page_title = member.full_name %}
+{% block content %}
+<div class="page-head">
+  <div class="breadcrumb"><a href="{{ url_for('members') }}">Members</a> / Profile</div>
+  <div class="actions">
+    {% if member.status == 'active' %}<a class="btn" href="{{ url_for('issue_book', member_id=member.id) }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Issue book</a>{% endif %}
+    <a class="btn secondary" href="{{ url_for('member_edit', member_id=member.id) }}"><i class="fa-solid fa-pen"></i> Edit</a>
+    <form class="inline-form" method="post" action="{{ url_for('member_toggle', member_id=member.id) }}"
+          data-confirm="{{ 'Deactivate' if member.status == 'active' else 'Activate' }} the membership of {{ member.full_name }}?"
+          data-confirm-button="{{ 'Deactivate' if member.status == 'active' else 'Activate' }}" data-confirm-style="{{ 'danger' if member.status == 'active' else 'success' }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn secondary" type="submit"><i class="fa-solid {{ 'fa-user-slash' if member.status == 'active' else 'fa-user-check' }}"></i> {{ 'Deactivate' if member.status == 'active' else 'Activate' }}</button></form>
+    <form class="inline-form" method="post" action="{{ url_for('member_delete', member_id=member.id) }}" data-confirm="Delete {{ member.full_name }}? Members with loan history cannot be deleted.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn danger" type="submit"><i class="fa-solid fa-trash"></i> Delete</button></form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="detail-head">
+    <span class="avatar" style="width:72px;height:72px;font-size:2rem">{{ member.full_name[:1] }}</span>
+    <div style="flex:1">
+      <h2 style="font-size:1.4rem">{{ member.full_name }}</h2>
+      {% if member.status == 'active' %}<span class="badge green">Active member</span>{% else %}<span class="badge slate">Inactive</span>{% endif %}
+      {% if member.overdue_loans %}<span class="badge red">{{ member.overdue_loans }} overdue</span>{% endif %}
+      <dl class="facts">
+        <div><dt>Member ID</dt><dd>{{ member.id|member_code }}</dd></div>
+        <div><dt>Email</dt><dd>{{ member.email }}</dd></div>
+        <div><dt>Phone</dt><dd>{{ member.phone or "—" }}</dd></div>
+        <div><dt>Registered</dt><dd>{{ member.registered_on|dmy }}</dd></div>
+        <div><dt>Books out</dt><dd>{{ member.active_loans }} / {{ settings.max_loans }}</dd></div>
+        <div><dt>Unpaid fines</dt><dd>{{ unpaid_total|rupees }}</dd></div>
+        <div style="grid-column:1/-1"><dt>Address</dt><dd>{{ member.address or "—" }}</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div class="card flush mt">
+  <div class="card-head"><h2>Active loans</h2></div>
+  {% if active %}
+  <div class="table-wrap"><table class="table"><thead><tr><th>Loan</th><th>Book</th><th>Issued</th><th>Due</th><th>Status</th><th class="num">Est. fine</th><th></th></tr></thead><tbody>
+    {% for l in active %}<tr><td>{{ l.id|loan_code }}</td><td><a href="{{ url_for('book_detail', book_id=l.book_id) }}">{{ l.book_title }}</a></td><td>{{ l.issue_date|dmy }}</td><td>{{ l.due_date|dmy }}</td>
+      <td>{{ loan_badge(l) }}</td><td class="num">{{ l.fine_due|rupees }}</td><td class="actions"><a class="btn sm" href="{{ url_for('return_book', loan_id=l.id) }}">Return</a></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ empty_state("fa-book-open", "No books on loan", "This member has returned everything.") }}{% endif %}
+</div>
+
+<div class="card flush mt">
+  <div class="card-head"><h2>Borrowing history</h2></div>
+  {% if history %}
+  <div class="table-wrap"><table class="table"><thead><tr><th>Loan</th><th>Book</th><th>Issued</th><th>Due</th><th>Returned</th><th class="num">Fine</th><th>Fine status</th></tr></thead><tbody>
+    {% for l in history %}<tr><td>{{ l.id|loan_code }}</td><td>{{ l.book_title }}</td><td>{{ l.issue_date|dmy }}</td><td>{{ l.due_date|dmy }}</td>
+      <td>{{ l.returned_date|dmy if l.returned_date else "—" }}</td><td class="num">{{ l.fine_due|rupees if l.status == 'returned' else "—" }}</td><td>{{ fine_badge(l) }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ empty_state("fa-clock-rotate-left", "No history yet", "Loans will be listed here.") }}{% endif %}
+</div>
+
+<div class="card flush mt">
+  <div class="card-head"><h2>Reservations</h2></div>
+  {% if reservations %}
+  <div class="table-wrap"><table class="table"><thead><tr><th>Book</th><th>Reserved</th><th>Status</th></tr></thead><tbody>
+    {% for r in reservations %}<tr><td>{{ r.book_title }}</td><td>{{ r.reserved_on|dmy }}</td>
+      <td><span class="badge {{ {'pending':'amber','ready':'green','fulfilled':'blue','cancelled':'slate'}[r.status] }}">{{ r.status|title }}</span></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ empty_state("fa-bookmark", "No reservations", "This member has not reserved any book.") }}{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" if session.get("admin_id") else "base_public.html" %}
+{% set page_title = "Not allowed" %}
+{% block content %}
+<div class="card error-page">
+  <div class="code">403</div>
+  <h2><i class="fa-solid fa-lock"></i> Not allowed</h2>
+  <p class="muted">{{ message }}</p>
+  <a class="btn" href="{{ url_for('dashboard') }}"><i class="fa-solid fa-house"></i> Back to dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% set page_title = "Return book" %}
+{% block content %}
+<div class="page-head"><div><div class="breadcrumb"><a href="{{ url_for('loans') }}">Loans</a> / Return</div><h2>Return “{{ loan.book_title }}”</h2></div></div>
+<div class="grid cols-2">
+  <div class="card">
+    <dl class="facts" style="margin-top:0">
+      <div><dt>Loan</dt><dd>{{ loan.id|loan_code }}</dd></div>
+      <div><dt>Member</dt><dd>{{ loan.member_name }}</dd></div>
+      <div><dt>Issued</dt><dd>{{ loan.issue_date|dmy }}</dd></div>
+      <div><dt>Due</dt><dd>{{ loan.due_date|dmy }}</dd></div>
+    </dl>
+    <form method="get" class="mt" data-no-loading>
+      <div class="field"><label for="return_date_pick">Return date</label>
+        <input id="return_date_pick" type="date" name="return_date" value="{{ return_date }}" min="{{ loan.issue_date }}" max="{{ today }}" data-autosubmit>
+        <div class="hint">Change the date to see the fine for a different day.</div></div>
+    </form>
+  </div>
+  <div class="card">
+    <div class="fine-box {{ 'has-fine' if preview_fine > 0 }}">
+      {% if preview_fine > 0 %}
+        <div>Fine to collect · {{ preview_days }} day(s) late × {{ settings.fine_per_day|rupees }}</div>
+        <div class="amount">{{ preview_fine|rupees }}</div>
+      {% else %}
+        <div class="amount"><i class="fa-solid fa-circle-check"></i> No fine</div><div>Returned on time.</div>
+      {% endif %}
+    </div>
+    <form method="post" novalidate>
+      {{ csrf() }}
+      <input type="hidden" name="return_date" value="{{ return_date }}">
+      {% if preview_fine > 0 %}
+      <div class="field"><label for="amount_paid">Amount collected now (₹)</label>
+        <input id="amount_paid" name="amount_paid" type="number" min="0" max="{{ preview_fine }}" step="0.01" value="{{ '%.2f' % preview_fine }}">
+        <div class="hint">Full amount = Paid · part of it = Partly paid · 0 = Unpaid (collect later from the Loans page).</div></div>
+      {% endif %}
+      <div class="form-actions">
+        <button class="btn success" type="submit"><i class="fa-solid fa-check"></i> Confirm return</button>
+        <a class="btn secondary" href="{{ url_for('loans') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

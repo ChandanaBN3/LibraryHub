@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty_state, csrf with context %}
+{% set page_title = "Categories" %}
+{% block content %}
+<div class="page-head"><div><h2>Categories</h2><p>Group books so they are easy to filter and report on.</p></div></div>
+<div class="grid two-one">
+  <div class="card flush">
+    {% if categories %}
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Name</th><th>Description</th><th class="num">Books</th><th></th></tr></thead>
+      <tbody>{% for c in categories %}
+        <tr>
+          <td colspan="3" style="padding:0">
+            <form id="edit-{{ c.id }}" method="post" action="{{ url_for('category_edit', category_id=c.id) }}" style="display:grid;grid-template-columns:1fr 1.6fr 70px;gap:.6rem;align-items:center;padding:.6rem 1rem" data-no-loading>
+              {{ csrf() }}
+              <input class="inline-input" name="name" value="{{ c.name }}" maxlength="60" required aria-label="Category name">
+              <input class="inline-input" name="description" value="{{ c.description }}" maxlength="200" aria-label="Description" placeholder="Description (optional)">
+              <span class="num"><a href="{{ url_for('books', category=c.id) }}">{{ c.book_count }}</a></span>
+            </form>
+          </td>
+          <td class="actions"><div class="btn-row" style="justify-content:flex-end;flex-wrap:nowrap">
+            <button class="btn sm" type="submit" form="edit-{{ c.id }}" title="Save changes"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            <form class="inline-form" method="post" action="{{ url_for('category_delete', category_id=c.id) }}" data-confirm="Delete the category “{{ c.name }}”? Categories that still contain books cannot be deleted.">
+              {{ csrf() }}<button class="btn sm danger" type="submit" title="Delete"><i class="fa-solid fa-trash"></i></button></form>
+          </div></td>
+        </tr>{% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}{{ empty_state("fa-tags", "No categories yet", "Add your first category using the form.") }}{% endif %}
+  </div>
+  <div class="card">
+    <h3><i class="fa-solid fa-plus"></i> Add category</h3>
+    <form method="post" action="{{ url_for('category_new') }}" novalidate>
+      {{ csrf() }}
+      <div class="field mb"><label for="name">Name <span class="req">*</span></label><input id="name" name="name" maxlength="60" required></div>
+      <div class="field mb"><label for="description">Description</label><input id="description" name="description" maxlength="200"></div>
+      <button class="btn block" type="submit"><i class="fa-solid fa-plus"></i> Add category</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

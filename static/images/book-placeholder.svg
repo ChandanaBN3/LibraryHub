@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 170" role="img" aria-label="Book cover placeholder">
+  <rect width="120" height="170" rx="8" fill="#e8eefc"/>
+  <rect x="14" y="14" width="92" height="142" rx="4" fill="#2563eb" opacity=".12"/>
+  <path d="M34 54h52v6H34zM34 70h52v6H34zM34 86h34v6H34z" fill="#2563eb" opacity=".45"/>
+  <path d="M60 116c-7-5-17-6-26-4v28c9-2 19-1 26 4 7-5 17-6 26-4v-28c-9-2-19-1-26 4z" fill="#1b3366" opacity=".8"/>
+</svg>

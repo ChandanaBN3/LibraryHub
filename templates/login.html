@@ -1,0 +1,54 @@
+{% from "_macros.html" import csrf with context %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin login · LibraryHub</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/book-placeholder.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-page">
+  <section class="login-hero">
+    <div class="brand"><span class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></span><span class="brand-name">LibraryHub</span></div>
+    <h1>Run your library from one clear dashboard.</h1>
+    <p>Catalogue, members, lending, fines and reports — all stored in a local SQLite database.</p>
+    <ul>
+      <li><i class="fa-solid fa-book"></i> Books &amp; categories</li>
+      <li><i class="fa-solid fa-arrows-rotate"></i> Issue, return &amp; overdue fines</li>
+      <li><i class="fa-solid fa-bookmark"></i> Reservation queue</li>
+      <li><i class="fa-solid fa-file-csv"></i> Reports with CSV export</li>
+    </ul>
+  </section>
+  <section class="login-panel">
+    <div class="login-card">
+      <div class="brand"><span class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></span><span class="brand-name">LibraryHub</span></div>
+      <h2>Admin sign in</h2>
+      <p class="muted">Only library administrators can sign in.</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert {{ 'danger' if category == 'error' else 'ok' if category == 'success' else 'info' }}" role="alert"><i class="fa-solid fa-circle-info"></i><div>{{ message }}</div></div>
+        {% endfor %}
+      {% endwith %}
+      {% if no_admin %}
+        <div class="alert warn"><i class="fa-solid fa-triangle-exclamation"></i><div>No admin account exists yet. Run <code>python seed.py</code> once, then reload this page.</div></div>
+      {% endif %}
+      <form method="post" novalidate>
+        {{ csrf() }}
+        <div class="field mb"><label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" required autofocus></div>
+        <div class="field mb"><label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required></div>
+        <button class="btn block" type="submit"><i class="fa-solid fa-right-to-bracket"></i> Sign in</button>
+      </form>
+      <div class="demo-note"><strong>Demo login</strong> (created by <code>python seed.py</code>):<br>
+        username <code>admin</code> · password <code>Admin@12345</code><br>
+        <span class="small">Change it in Settings after you sign in.</span></div>
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

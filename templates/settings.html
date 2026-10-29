@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, field with context %}
+{% set page_title = "Settings" %}
+{% block content %}
+<div class="page-head"><div><h2>Library settings</h2><p>These values are saved in the database and used immediately by issuing, returning and fines.</p></div></div>
+<div class="grid cols-2">
+  <div class="card">
+    <h3><i class="fa-solid fa-sliders"></i> Lending policy</h3>
+    <form method="post" novalidate>
+      {{ csrf() }}
+      <div class="form-grid">
+        <div class="full">{{ field("library_name", "Library name", form, errors, required=True, attrs='maxlength=60')|safe }}</div>
+        {{ field("loan_days", "Loan duration (days)", form, errors, type="number", required=True, hint="Default due date = issue date + this many days.", attrs='min=1 max=365')|safe }}
+        {{ field("fine_per_day", "Fine per overdue day (₹)", form, errors, type="number", required=True, hint="Default ₹2. Set 0 for no fines.", attrs='min=0 max=1000 step=0.5')|safe }}
+        {{ field("max_loans", "Max active loans per member", form, errors, type="number", required=True, attrs='min=1 max=50')|safe }}
+        <div class="field"><span class="label">Overdue restriction</span>
+          <label class="check"><input type="checkbox" name="block_overdue" {{ 'checked' if form.block_overdue }}> Block members who have overdue books from borrowing more</label></div>
+      </div>
+      <div class="form-actions"><button class="btn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save settings</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h3><i class="fa-solid fa-key"></i> Change admin password</h3>
+    <form method="post" action="{{ url_for('change_password') }}" novalidate>
+      {{ csrf() }}
+      <div class="field mb"><label for="current_password">Current password</label><input id="current_password" name="current_password" type="password" autocomplete="current-password" required></div>
+      <div class="field mb"><label for="new_password">New password</label><input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="8" required><div class="hint">At least 8 characters.</div></div>
+      <div class="field mb"><label for="confirm_password">Confirm new password</label><input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn" type="submit"><i class="fa-solid fa-lock"></i> Update password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

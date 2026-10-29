@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager, empty_state, cover with context %}
+{% set page_title = "Books" %}
+{% block content %}
+<div class="page-head">
+  <div><h2>Book catalogue</h2><p>{{ page.total }} title(s) match your filters.</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('book_new') }}"><i class="fa-solid fa-plus"></i> Add book</a></div>
+</div>
+
+<div class="card flush">
+  <form class="filters" method="get" style="padding:1rem 1.25rem 0" data-no-loading>
+    <div class="grow"><input type="search" name="q" value="{{ q }}" placeholder="Search by title, author or ISBN" aria-label="Search books"></div>
+    <select name="category" aria-label="Filter by category" data-autosubmit>
+      <option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if category == c.id }}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <select name="availability" aria-label="Filter by availability" data-autosubmit>
+      <option value="">Any availability</option>
+      <option value="available" {{ 'selected' if availability == 'available' }}>Available now</option>
+      <option value="unavailable" {{ 'selected' if availability == 'unavailable' }}>All copies out</option>
+    </select>
+    <button class="btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    {% if q or category or availability %}<a class="btn secondary" href="{{ url_for('books') }}">Clear</a>{% endif %}
+  </form>
+
+  {% if books %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Book</th><th>ISBN</th><th>Category</th><th>Shelf</th><th class="num">Copies</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for b in books %}
+        <tr>
+          <td><div class="book-cell">{{ cover(b) }}<div><a class="cell-title" href="{{ url_for('book_detail', book_id=b.id) }}">{{ b.title }}</a><div class="cell-sub">{{ b.author }}</div></div></div></td>
+          <td class="nowrap">{{ b.isbn }}</td>
+          <td>{{ b.category_name or "—" }}</td>
+          <td class="nowrap">{{ b.shelf or "—" }}</td>
+          <td class="num nowrap">{{ b.available_copies }} / {{ b.total_copies }}</td>
+          <td>
+            {% if b.free_copies > 0 %}<span class="badge green">Available</span>
+            {% elif b.available_copies > 0 %}<span class="badge amber">Held for reservation</span>
+            {% else %}<span class="badge red">All out</span>{% endif %}
+            {% if b.queue_length %}<span class="badge slate" title="Members waiting">{{ b.queue_length }} waiting</span>{% endif %}
+          </td>
+          <td class="actions"><div class="btn-row" style="justify-content:flex-end">
+            <a class="btn sm secondary" href="{{ url_for('book_detail', book_id=b.id) }}" title="View"><i class="fa-solid fa-eye"></i></a>
+            <a class="btn sm secondary" href="{{ url_for('book_edit', book_id=b.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a>
+            <form class="inline-form" method="post" action="{{ url_for('book_delete', book_id=b.id) }}"
+                  data-confirm="Delete “{{ b.title }}”? This cannot be undone. Books with loan history cannot be deleted.">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn sm danger" type="submit" title="Delete"><i class="fa-solid fa-trash"></i></button></form>
+          </div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {% if q or category or availability %}
+      {{ empty_state("fa-magnifying-glass", "No books found", "Try a different search or clear the filters.") }}
+    {% else %}
+      {% call empty_state("fa-book", "Your catalogue is empty", "Add your first book to get started.") %}<a class="btn" href="{{ url_for('book_new') }}">Add a book</a>{% endcall %}
+    {% endif %}
+  {% endif %}
+  {{ pager(page, "books", "books") }}
+</div>
+{% endblock %}

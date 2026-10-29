@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty_state, loan_badge, fine_badge, csrf with context %}
+{% set page_title = "Overdue books" %}
+{% block content %}
+<div class="page-head">
+  <div><h2>Overdue books</h2><p>Calculated from today’s date ({{ today|dmy }}) at {{ settings.fine_per_day|rupees }} per day.</p></div>
+  <div class="actions"><a class="btn secondary" href="{{ url_for('reports_export', report='overdue') }}"><i class="fa-solid fa-file-csv"></i> Export CSV</a></div>
+</div>
+<section class="stats">
+  <div class="stat"><span class="icon red"><i class="fa-solid fa-clock"></i></span><div><div class="value">{{ loans|length }}</div><div class="label">Overdue loans shown</div></div></div>
+  <div class="stat"><span class="icon amber"><i class="fa-solid fa-indian-rupee-sign"></i></span><div><div class="value">{{ totals.estimated|rupees }}</div><div class="label">Estimated fines (still out)</div></div></div>
+  <div class="stat"><span class="icon purple"><i class="fa-solid fa-wallet"></i></span><div><div class="value">{{ totals.unpaid|rupees }}</div><div class="label">Unpaid fines (returned books)</div></div></div>
+</section>
+
+<div class="card flush">
+  <div class="card-head"><h2>Books not yet returned</h2></div>
+  <form class="filters" method="get" style="padding:0 1.25rem" data-no-loading>
+    <div class="grow"><input type="search" name="q" value="{{ q }}" placeholder="Search member or book" aria-label="Search overdue"></div>
+    <select name="min_days" aria-label="Minimum days overdue" data-autosubmit>
+      {% for d, label in [(0, "Any delay"), (7, "7+ days"), (14, "14+ days"), (30, "30+ days")] %}<option value="{{ d }}" {{ 'selected' if min_days == d }}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Filter</button>
+    {% if q or min_days %}<a class="btn secondary" href="{{ url_for('overdue') }}">Clear</a>{% endif %}
+  </form>
+  {% if loans %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Member</th><th>Book</th><th>Issued</th><th>Due</th><th>Days overdue</th><th class="num">Estimated fine</th><th></th></tr></thead>
+    <tbody>{% for l in loans %}
+      <tr><td><a class="cell-title" href="{{ url_for('member_detail', member_id=l.member_id) }}">{{ l.member_name }}</a></td>
+        <td>{{ l.book_title }}<div class="cell-sub">{{ l.id|loan_code }}</div></td>
+        <td>{{ l.issue_date|dmy }}</td><td>{{ l.due_date|dmy }}</td><td>{{ loan_badge(l) }}</td>
+        <td class="num"><strong>{{ l.fine_due|rupees }}</strong></td>
+        <td class="actions"><a class="btn sm" href="{{ url_for('return_book', loan_id=l.id) }}">Return</a></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}{{ empty_state("fa-face-smile", "No overdue books", "Nothing matches — every book is on time.") }}{% endif %}
+</div>
+
+<div class="card flush mt">
+  <div class="card-head"><h2>Unpaid fines on returned books</h2></div>
+  {% if unpaid %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Member</th><th>Book</th><th>Returned</th><th class="num">Fine</th><th class="num">Paid</th><th class="num">Balance</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for l in unpaid %}
+      <tr><td>{{ l.member_name }}</td><td>{{ l.book_title }}<div class="cell-sub">{{ l.id|loan_code }}</div></td><td>{{ l.returned_date|dmy }}</td>
+        <td class="num">{{ l.fine_amount|rupees }}</td><td class="num">{{ l.fine_paid|rupees }}</td><td class="num"><strong>{{ (l.fine_amount - l.fine_paid)|rupees }}</strong></td>
+        <td>{{ fine_badge(l) }}</td>
+        <td class="actions">
+          <form class="inline-form btn-row" method="post" action="{{ url_for('record_fine_payment', loan_id=l.id) }}" style="flex-wrap:nowrap;justify-content:flex-end" data-no-loading>
+              {{ csrf() }}<input class="inline-input" style="width:92px;padding:.3rem .5rem" type="number" name="amount" min="0.01" max="{{ '%.2f' % (l.fine_amount - l.fine_paid) }}" step="0.01" value="{{ '%.2f' % (l.fine_amount - l.fine_paid) }}" aria-label="Amount paid now (balance {{ (l.fine_amount - l.fine_paid)|rupees }})" title="Amount paid now - lower it for a part payment">
+              <button class="btn sm success" type="submit"><i class="fa-solid fa-indian-rupee-sign"></i> Record</button></form></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}{{ empty_state("fa-circle-check", "No unpaid fines", "All fines have been collected.") }}{% endif %}
+</div>
+{% endblock %}

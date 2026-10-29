@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, field with context %}
+{% set page_title = "Edit book" if editing else "Add book" %}
+{% block content %}
+{% set cat_options = [("", "— No category —")] %}
+{% for c in categories %}{% set _ = cat_options.append((c.id, c.name)) %}{% endfor %}
+<div class="page-head">
+  <div><div class="breadcrumb"><a href="{{ url_for('books') }}">Books</a> / {{ 'Edit' if editing else 'New' }}</div>
+    <h2>{{ "Edit “" ~ book.title ~ "”" if editing else "Add a new book" }}</h2></div>
+</div>
+<div class="card">
+  <form method="post" novalidate>
+    {{ csrf() }}
+    <div class="form-grid">
+      <div class="full">{{ field("title", "Title", form, errors, required=True, attrs='maxlength=200')|safe }}</div>
+      {{ field("author", "Author", form, errors, required=True, attrs='maxlength=120')|safe }}
+      {{ field("isbn", "ISBN", form, errors, required=True, hint="10 or 13 digits; hyphens are fine.", attrs='maxlength=20')|safe }}
+      {{ field("category_id", "Category", form, errors, kind="select", options=cat_options)|safe }}
+      {{ field("publisher", "Publisher", form, errors, attrs='maxlength=120')|safe }}
+      {{ field("publication_year", "Publication year", form, errors, type="number", attrs='min=1000 max=2100')|safe }}
+      {{ field("shelf", "Shelf / location", form, errors, hint="Example: A-12", attrs='maxlength=30')|safe }}
+      {{ field("total_copies", "Total copies", form, errors, type="number", required=True,
+               hint=("Copies currently issued or held for reservations: " ~ (book.issued_copies + book.held_copies)) if editing else "How many physical copies the library owns.",
+               attrs='min=1 max=1000')|safe }}
+      {{ field("cover_url", "Cover image URL (optional)", form, errors, type="url", hint="Leave empty to use the built-in placeholder.", attrs='maxlength=500')|safe }}
+      <div class="full">{{ field("description", "Description", form, errors, kind="textarea", attrs='maxlength=2000')|safe }}</div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ "Save changes" if editing else "Add book" }}</button>
+      <a class="btn secondary" href="{{ url_for('book_detail', book_id=book.id) if editing else url_for('books') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

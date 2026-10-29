@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager, empty_state, csrf with context %}
+{% set page_title = "Reservations" %}
+{% block content %}
+<div class="page-head"><div><h2>Reservations</h2>
+  <p>Managed by the administrator on behalf of members (members do not log in to this system).</p></div></div>
+
+<div class="alert info"><i class="fa-solid fa-list-ol"></i><div><strong>Priority rule: first come, first served.</strong>
+  A copy that comes back is held for the first member in the queue once you press <em>Mark ready</em>. Held copies cannot be issued to anyone else, and members further back in the queue cannot jump ahead.</div></div>
+
+<div class="grid two-one">
+  <div class="card flush">
+    <div class="tabs" style="padding:1rem 1.25rem 0;margin-bottom:0">
+      {% for key, label in [("open", "Open"), ("pending", "Waiting"), ("ready", "Ready"), ("fulfilled", "Fulfilled"), ("cancelled", "Cancelled"), ("all", "All")] %}
+        <a href="{{ url_for('reservations', status=key, q=q) }}" class="{{ 'active' if status == key }}">{{ label }}</a>{% endfor %}
+    </div>
+    <form class="filters" method="get" style="padding:1rem 1.25rem 0" data-no-loading>
+      <input type="hidden" name="status" value="{{ status }}">
+      <div class="grow"><input type="search" name="q" value="{{ q }}" placeholder="Search member or book" aria-label="Search reservations"></div>
+      <button class="btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    </form>
+    {% if reservations %}
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Book</th><th>Member</th><th>Reserved</th><th>Queue</th><th>Status</th><th></th></tr></thead>
+      <tbody>{% for r in reservations %}
+        <tr>
+          <td><a class="cell-title" href="{{ url_for('book_detail', book_id=r.book_id) }}">{{ r.book_title }}</a></td>
+          <td><a href="{{ url_for('member_detail', member_id=r.member_id) }}">{{ r.member_name }}</a></td>
+          <td class="nowrap">{{ r.reserved_on|dmy }}</td>
+          <td>{% if r.status == 'pending' %}#{{ r.position }}{% else %}—{% endif %}</td>
+          <td>{% if r.status == 'pending' %}<span class="badge amber">Waiting</span>
+              {% elif r.status == 'ready' %}<span class="badge green">Ready for collection</span>
+              {% elif r.status == 'fulfilled' %}<span class="badge blue">Fulfilled</span>
+              {% else %}<span class="badge slate">Cancelled</span>{% endif %}</td>
+          <td class="actions"><div class="btn-row" style="justify-content:flex-end">
+            {% if r.status == 'pending' and r.position == 1 and r.free_copies > 0 %}
+              <form class="inline-form" method="post" action="{{ url_for('reservation_ready', reservation_id=r.id) }}">{{ csrf() }}<button class="btn sm success" type="submit"><i class="fa-solid fa-box-archive"></i> Mark ready</button></form>
+            {% endif %}
+            {% if r.status == 'ready' %}
+              <a class="btn sm" href="{{ url_for('issue_book', member_id=r.member_id, book_id=r.book_id) }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Issue</a>
+            {% endif %}
+            {% if r.status in ('pending', 'ready') %}
+              <form class="inline-form" method="post" action="{{ url_for('reservation_cancel', reservation_id=r.id) }}" data-confirm="Cancel this reservation for {{ r.member_name }}?" data-confirm-button="Cancel reservation">
+                {{ csrf() }}<button class="btn sm secondary" type="submit"><i class="fa-solid fa-xmark"></i> Cancel</button></form>
+            {% endif %}
+          </div></td>
+        </tr>{% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}{{ empty_state("fa-bookmark", "No reservations here", "Create a reservation for a book that has no free copy.") }}{% endif %}
+    {{ pager(page, "reservations", "reservations") }}
+  </div>
+
+  <div class="card">
+    <h3><i class="fa-solid fa-plus"></i> New reservation</h3>
+    {% if books_list and members_list %}
+    <form method="post" action="{{ url_for('reservation_new') }}" novalidate>
+      {{ csrf() }}
+      <div class="field mb"><label for="r_member">Member</label>
+        <select id="r_member" name="member_id" required><option value="">— Choose —</option>{% for m in members_list %}<option value="{{ m.id }}">{{ m.full_name }}</option>{% endfor %}</select></div>
+      <div class="field mb"><label for="r_book">Book with no free copy</label>
+        <select id="r_book" name="book_id" required><option value="">— Choose —</option>{% for b in books_list %}<option value="{{ b.id }}">{{ b.title }}</option>{% endfor %}</select>
+        <div class="hint">Only books with no free copy can be reserved.</div></div>
+      <button class="btn block" type="submit"><i class="fa-solid fa-bookmark"></i> Reserve</button>
+    </form>
+    {% elif not books_list %}
+      <p class="muted">Every book currently has a free copy, so nothing needs reserving.</p>
+    {% else %}<p class="muted">Register an active member first.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

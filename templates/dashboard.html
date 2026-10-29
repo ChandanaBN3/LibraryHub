@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% set page_title = "Dashboard" %}
+{% block content %}
+<div class="page-head">
+  <div><h2>Welcome back, {{ admin_username }}</h2><p>Live numbers from your library database · {{ today|dmy }}</p></div>
+</div>
+
+<div class="quick-actions">
+  <a class="btn" href="{{ url_for('issue_book') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Issue a book</a>
+  <a class="btn secondary" href="{{ url_for('loans', status='active') }}"><i class="fa-solid fa-rotate-left"></i> Return a book</a>
+  <a class="btn secondary" href="{{ url_for('book_new') }}"><i class="fa-solid fa-plus"></i> Add book</a>
+  <a class="btn secondary" href="{{ url_for('member_new') }}"><i class="fa-solid fa-user-plus"></i> Register member</a>
+  <a class="btn secondary" href="{{ url_for('reservations') }}"><i class="fa-solid fa-bookmark"></i> Reservations</a>
+</div>
+
+<section class="stats" aria-label="Library statistics">
+  <a class="stat" href="{{ url_for('books') }}"><span class="icon blue"><i class="fa-solid fa-book"></i></span><div><div class="value">{{ stats.titles }}</div><div class="label">Book titles</div></div></a>
+  <a class="stat" href="{{ url_for('reports', report='inventory') }}"><span class="icon purple"><i class="fa-solid fa-layer-group"></i></span><div><div class="value">{{ stats.copies }}</div><div class="label">Physical copies</div></div></a>
+  <a class="stat" href="{{ url_for('books', availability='available') }}"><span class="icon green"><i class="fa-solid fa-circle-check"></i></span><div><div class="value">{{ stats.available }}</div><div class="label">Available copies</div></div></a>
+  <a class="stat" href="{{ url_for('members') }}"><span class="icon blue"><i class="fa-solid fa-users"></i></span><div><div class="value">{{ stats.members }}</div><div class="label">Registered members</div></div></a>
+  <a class="stat" href="{{ url_for('loans', status='active') }}"><span class="icon amber"><i class="fa-solid fa-book-open"></i></span><div><div class="value">{{ stats.issued }}</div><div class="label">Currently issued</div></div></a>
+  <a class="stat" href="{{ url_for('overdue') }}"><span class="icon red"><i class="fa-solid fa-clock"></i></span><div><div class="value">{{ stats.overdue }}</div><div class="label">Overdue loans</div></div></a>
+  <a class="stat" href="{{ url_for('reservations') }}"><span class="icon purple"><i class="fa-solid fa-bookmark"></i></span><div><div class="value">{{ stats.pending_reservations }}</div><div class="label">Pending reservations{% if stats.ready_reservations %} · {{ stats.ready_reservations }} ready{% endif %}</div></div></a>
+</section>
+
+<div class="grid two-one">
+  <div class="card">
+    <div class="card-head"><h2>Books by category</h2><a class="small" href="{{ url_for('categories') }}">Manage</a></div>
+    {% if category_values %}
+      <div class="chart-box"><canvas id="category-chart" role="img" aria-label="Doughnut chart of book titles per category"
+        data-labels='{{ category_labels|tojson }}' data-values='{{ category_values|tojson }}'></canvas></div>
+    {% else %}
+      {% from "_macros.html" import empty_state %}
+      {{ empty_state("fa-chart-pie", "No books yet", "Add books to see the category chart.") }}
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Most borrowed</h2><a class="small" href="{{ url_for('reports', report='most_borrowed') }}">Report</a></div>
+    {% if popular %}
+    <ul class="list">
+      {% for b in popular %}
+      <li><span><span class="rank">{{ loop.index }}</span><a href="{{ url_for('book_detail', book_id=b.id) }}"><strong>{{ b.title }}</strong></a><br><span class="cell-sub" style="margin-left:2.3rem">{{ b.author }}</span></span>
+        <span class="badge blue">{{ b.borrow_count }}×</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<div class="empty"><i class="fa-solid fa-ranking-star"></i><p>Nothing has been borrowed yet.</p></div>{% endif %}
+  </div>
+</div>
+
+<div class="grid cols-2 mt">
+  <div class="card">
+    <div class="card-head"><h2>Recent activity</h2><a class="small" href="{{ url_for('loans') }}">All loans</a></div>
+    {% if recent %}
+    <ul class="list">
+      {% for r in recent %}
+      <li><div class="activity"><span class="ico {{ 'out' if r.action == 'Issued' else 'in' }}"><i class="fa-solid {{ 'fa-arrow-right-from-bracket' if r.action == 'Issued' else 'fa-rotate-left' }}"></i></span>
+        <div><strong>{{ r.book_title }}</strong><br><span class="cell-sub">{{ r.action }} {{ 'to' if r.action == 'Issued' else 'by' }} {{ r.member_name }}</span></div></div>
+        <span class="small muted nowrap">{{ r.event_date|dmy }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<div class="empty"><i class="fa-solid fa-clock-rotate-left"></i><p>No issue or return activity yet.</p></div>{% endif %}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> Overdue alerts</h2><a class="small" href="{{ url_for('overdue') }}">View all</a></div>
+    {% if overdue_loans %}
+    <ul class="list">
+      {% for l in overdue_loans %}
+      <li><div><strong>{{ l.book_title }}</strong><br><span class="cell-sub">{{ l.member_name }} · due {{ l.due_date|dmy }}</span></div>
+        <div class="right"><span class="badge red">{{ l.days_overdue }} day(s)</span><br><span class="cell-sub">{{ l.fine_due|rupees }}</span></div></li>
+      {% endfor %}
+    </ul>
+    {% else %}<div class="empty"><i class="fa-solid fa-face-smile"></i><p>No overdue books. Great!</p></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

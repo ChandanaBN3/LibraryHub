@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager, empty_state, loan_badge, fine_badge, csrf with context %}
+{% set page_title = "Loans & returns" %}
+{% block content %}
+<div class="page-head">
+  <div><h2>Loans &amp; returns</h2><p>{{ page.total }} loan(s) match your filters.</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('issue_book') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Issue a book</a></div>
+</div>
+<div class="tabs">
+  {% for key, label in [("", "All"), ("active", "Issued"), ("overdue", "Overdue"), ("returned", "Returned"), ("unpaid_fines", "Unpaid fines")] %}
+    <a href="{{ url_for('loans', status=key, q=q) }}" class="{{ 'active' if status == key }}">{{ label }}</a>
+  {% endfor %}
+</div>
+<div class="card flush">
+  <form class="filters" method="get" style="padding:1rem 1.25rem 0" data-no-loading>
+    <input type="hidden" name="status" value="{{ status }}">
+    <div class="grow"><input type="search" name="q" value="{{ q }}" placeholder="Search member, book or loan number (e.g. 12)" aria-label="Search loans"></div>
+    <button class="btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    {% if q %}<a class="btn secondary" href="{{ url_for('loans', status=status) }}">Clear</a>{% endif %}
+  </form>
+  {% if loans %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Book</th><th>Member</th><th>Issued / due</th><th>Status</th><th class="num">Fine</th><th class="actions" style="text-align:right">Action</th></tr></thead>
+    <tbody>
+    {% for l in loans %}
+      <tr>
+        <td class="col-book"><a class="cell-title" href="{{ url_for('book_detail', book_id=l.book_id) }}">{{ l.book_title }}</a><div class="cell-sub">{{ l.id|loan_code }}</div></td>
+        <td class="nowrap"><a href="{{ url_for('member_detail', member_id=l.member_id) }}">{{ l.member_name }}</a></td>
+        <td class="nowrap">{{ l.issue_date|dmy }}<div class="cell-sub">due {{ l.due_date|dmy }}</div>{% if l.returned_date %}<div class="cell-sub">returned {{ l.returned_date|dmy }}</div>{% endif %}</td>
+        <td>{{ loan_badge(l) }}</td>
+        <td class="num nowrap">{% if l.fine_due > 0 %}{{ l.fine_due|rupees }}
+            {% if l.status != 'returned' %}<div class="cell-sub">estimate</div>
+            {% else %}<div>{{ fine_badge(l) }}</div>{% if l.fine_paid > 0 %}<div class="cell-sub">paid {{ l.fine_paid|rupees }}</div>{% endif %}{% endif %}
+          {% else %}—{% endif %}</td>
+        <td class="actions">
+          {% if l.status != 'returned' %}
+            <a class="btn sm" href="{{ url_for('return_book', loan_id=l.id) }}"><i class="fa-solid fa-rotate-left"></i> Return</a>
+          {% elif l.fine_amount > 0 and l.fine_paid + 0.005 < l.fine_amount %}
+            <form class="inline-form btn-row" method="post" action="{{ url_for('record_fine_payment', loan_id=l.id) }}" style="flex-wrap:nowrap;justify-content:flex-end" data-no-loading>
+              {{ csrf() }}<input class="inline-input" style="width:84px;padding:.3rem .5rem" type="number" name="amount" min="0.01" max="{{ '%.2f' % (l.fine_amount - l.fine_paid) }}" step="0.01" value="{{ '%.2f' % (l.fine_amount - l.fine_paid) }}" aria-label="Amount paid now (balance {{ (l.fine_amount - l.fine_paid)|rupees }})" title="Amount paid now - lower it for a part payment">
+              <button class="btn sm success" type="submit"><i class="fa-solid fa-indian-rupee-sign"></i> Record</button></form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty_state("fa-arrows-rotate", "No loans found", "Issue a book to create the first loan, or change the filter.") }}{% endif %}
+  {{ pager(page, "loans", "loans") }}
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager, empty_state with context %}
+{% set page_title = "Members" %}
+{% block content %}
+<div class="page-head">
+  <div><h2>Members</h2><p>{{ page.total }} member(s) match your filters.</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('member_new') }}"><i class="fa-solid fa-user-plus"></i> Register member</a></div>
+</div>
+<div class="card flush">
+  <form class="filters" method="get" style="padding:1rem 1.25rem 0" data-no-loading>
+    <div class="grow"><input type="search" name="q" value="{{ q }}" placeholder="Search name, email, phone or member number" aria-label="Search members"></div>
+    <select name="status" aria-label="Filter by status" data-autosubmit>
+      <option value="">All members</option>
+      <option value="active" {{ 'selected' if status == 'active' }}>Active</option>
+      <option value="inactive" {{ 'selected' if status == 'inactive' }}>Inactive</option>
+      <option value="overdue" {{ 'selected' if status == 'overdue' }}>Has overdue books</option>
+    </select>
+    <button class="btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    {% if q or status %}<a class="btn secondary" href="{{ url_for('members') }}">Clear</a>{% endif %}
+  </form>
+  {% if members %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Member ID</th><th>Name</th><th>Contact</th><th>Registered</th><th class="num">Active loans</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for m in members %}
+      <tr>
+        <td class="nowrap">{{ m.id|member_code }}</td>
+        <td><a class="cell-title" href="{{ url_for('member_detail', member_id=m.id) }}">{{ m.full_name }}</a></td>
+        <td>{{ m.email }}<div class="cell-sub">{{ m.phone or "no phone" }}</div></td>
+        <td>{{ m.registered_on|dmy }}</td>
+        <td class="num">{{ m.active_loans }}{% if m.overdue_loans %} <span class="badge red">{{ m.overdue_loans }} overdue</span>{% endif %}</td>
+        <td>{% if m.status == 'active' %}<span class="badge green">Active</span>{% else %}<span class="badge slate">Inactive</span>{% endif %}</td>
+        <td class="actions"><div class="btn-row" style="justify-content:flex-end">
+          <a class="btn sm secondary" href="{{ url_for('member_detail', member_id=m.id) }}" title="View"><i class="fa-solid fa-eye"></i></a>
+          <a class="btn sm secondary" href="{{ url_for('member_edit', member_id=m.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a>
+          <form class="inline-form" method="post" action="{{ url_for('member_toggle', member_id=m.id) }}"
+                data-confirm="{{ 'Deactivate' if m.status == 'active' else 'Activate' }} the membership of {{ m.full_name }}?"
+                data-confirm-button="{{ 'Deactivate' if m.status == 'active' else 'Activate' }}" data-confirm-style="{{ 'danger' if m.status == 'active' else 'success' }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn sm secondary" type="submit" title="{{ 'Deactivate' if m.status == 'active' else 'Activate' }}"><i class="fa-solid {{ 'fa-user-slash' if m.status == 'active' else 'fa-user-check' }}"></i></button></form>
+        </div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+    {% if q or status %}{{ empty_state("fa-magnifying-glass", "No members found", "Try a different search or clear the filters.") }}
+    {% else %}{% call empty_state("fa-users", "No members yet", "Register your first member.") %}<a class="btn" href="{{ url_for('member_new') }}">Register member</a>{% endcall %}{% endif %}
+  {% endif %}
+  {{ pager(page, "members", "members") }}
+</div>
+{% endblock %}

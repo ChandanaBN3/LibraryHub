@@ -1,0 +1,10 @@
+{% extends "base.html" if session.get("admin_id") else "base_public.html" %}
+{% set page_title = "Something went wrong" %}
+{% block content %}
+<div class="card error-page">
+  <div class="code">500</div>
+  <h2><i class="fa-solid fa-bug"></i> Something went wrong</h2>
+  <p class="muted">{{ message|default("An unexpected error occurred. Your data is safe — please go back and try again.") }}</p>
+  <a class="btn" href="{{ url_for('dashboard') }}"><i class="fa-solid fa-house"></i> Back to dashboard</a>
+</div>
+{% endblock %}

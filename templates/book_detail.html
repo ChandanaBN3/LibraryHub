@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_macros.html" import loan_badge, cover, empty_state with context %}
+{% set page_title = book.title %}
+{% block content %}
+<div class="page-head">
+  <div class="breadcrumb"><a href="{{ url_for('books') }}">Books</a> / Details</div>
+  <div class="actions">
+    {% if book.free_copies > 0 %}<a class="btn" href="{{ url_for('issue_book', book_id=book.id) }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Issue</a>{% endif %}
+    <a class="btn secondary" href="{{ url_for('book_edit', book_id=book.id) }}"><i class="fa-solid fa-pen"></i> Edit</a>
+    <form class="inline-form" method="post" action="{{ url_for('book_delete', book_id=book.id) }}" data-confirm="Delete “{{ book.title }}”? This cannot be undone.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn danger" type="submit"><i class="fa-solid fa-trash"></i> Delete</button></form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="detail-head">
+    {{ cover(book, "cover") }}
+    <div style="flex:1">
+      <h2 style="font-size:1.4rem">{{ book.title }}</h2>
+      <p class="muted">by {{ book.author }}</p>
+      {% if book.free_copies > 0 %}<span class="badge green">Available</span>
+      {% elif book.available_copies > 0 %}<span class="badge amber">Held for reservation</span>
+      {% else %}<span class="badge red">All copies out</span>{% endif %}
+      {% if book.category_name %}<span class="badge blue">{{ book.category_name }}</span>{% endif %}
+      <dl class="facts">
+        <div><dt>ISBN</dt><dd>{{ book.isbn }}</dd></div>
+        <div><dt>Publisher</dt><dd>{{ book.publisher or "—" }}</dd></div>
+        <div><dt>Year</dt><dd>{{ book.publication_year or "—" }}</dd></div>
+        <div><dt>Shelf</dt><dd>{{ book.shelf or "—" }}</dd></div>
+        <div><dt>Total copies</dt><dd>{{ book.total_copies }}</dd></div>
+        <div><dt>On shelf</dt><dd>{{ book.available_copies }}</dd></div>
+        <div><dt>Issued now</dt><dd>{{ book.issued_copies }}</dd></div>
+        <div><dt>Times borrowed</dt><dd>{{ times_borrowed }}</dd></div>
+      </dl>
+      <div class="meter" aria-hidden="true"><span style="width: {{ (book.issued_copies / book.total_copies * 100)|round|int }}%"></span></div>
+      <div class="small muted">{{ book.issued_copies }} of {{ book.total_copies }} copies issued</div>
+      {% if book.description %}<p class="mt">{{ book.description }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2 mt">
+  <div class="card flush">
+    <div class="card-head"><h2>Currently issued</h2></div>
+    {% if active_loans %}
+    <div class="table-wrap"><table class="table"><thead><tr><th>Member</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for l in active_loans %}<tr><td><a href="{{ url_for('member_detail', member_id=l.member_id) }}">{{ l.member_name }}</a></td><td>{{ l.due_date|dmy }}</td><td>{{ loan_badge(l) }}</td>
+        <td class="actions"><a class="btn sm" href="{{ url_for('return_book', loan_id=l.id) }}">Return</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state("fa-book-open", "Nobody has this book", "All copies are on the shelf.") }}{% endif %}
+  </div>
+  <div class="card flush">
+    <div class="card-head"><h2>Reservation queue</h2></div>
+    {% if queue %}
+    <div class="table-wrap"><table class="table"><thead><tr><th>Member</th><th>Reserved</th><th>Status</th></tr></thead><tbody>
+      {% for r in queue %}<tr><td><a href="{{ url_for('member_detail', member_id=r.member_id) }}">{{ r.member_name }}</a></td><td>{{ r.reserved_on|dmy }}</td>
+        <td>{% if r.status == 'ready' %}<span class="badge green">Ready for collection</span>{% else %}<span class="badge amber">Waiting</span>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state("fa-bookmark", "No reservations", "Nobody is waiting for this book.") }}{% endif %}
+  </div>
+</div>
+
+<div class="card flush mt">
+  <div class="card-head"><h2>Recent returns</h2></div>
+  {% if history %}
+  <div class="table-wrap"><table class="table"><thead><tr><th>Loan</th><th>Member</th><th>Issued</th><th>Returned</th><th class="num">Fine</th></tr></thead><tbody>
+    {% for l in history %}<tr><td>{{ l.id|loan_code }}</td><td>{{ l.member_name }}</td><td>{{ l.issue_date|dmy }}</td><td>{{ l.returned_date|dmy }}</td><td class="num">{{ l.fine_amount|rupees }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ empty_state("fa-clock-rotate-left", "No returns yet", "Returned loans will appear here.") }}{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf with context %}
+{% set page_title = "Issue book" %}
+{% block content %}
+<div class="page-head"><div><h2>Issue a book</h2><p>The loan ID is created automatically. Availability goes down by one.</p></div></div>
+<div class="grid two-one">
+  <div class="card">
+    {% if not members_list %}
+      <div class="alert warn"><i class="fa-solid fa-triangle-exclamation"></i><div>There are no active members. <a href="{{ url_for('member_new') }}">Register a member</a> first.</div></div>
+    {% endif %}
+    <form method="post" novalidate>
+      {{ csrf() }}
+      <div class="form-grid">
+        <div class="field full"><label for="member_id">Member <span class="req">*</span></label>
+          <select id="member_id" name="member_id" required>
+            <option value="">— Choose a member —</option>
+            {% for m in members_list %}<option value="{{ m.id }}" {{ 'selected' if form.member_id|string == m.id|string }}>{{ m.id|member_code }} · {{ m.full_name }} ({{ m.email }})</option>{% endfor %}
+          </select><div class="hint">Only active members are listed.</div></div>
+        <div class="field full"><label for="book_id">Book <span class="req">*</span></label>
+          <select id="book_id" name="book_id" required>
+            <option value="">— Choose a book —</option>
+            {% for b in books_list %}
+              <option value="{{ b.id }}" {{ 'selected' if form.book_id|string == b.id|string }} {{ 'disabled' if b.available_copies <= 0 }}>{{ b.title }} — {{ b.author }}
+                ({{ b.available_copies }} on shelf{% if b.held_copies %}, {{ b.held_copies }} held{% endif %})</option>
+            {% endfor %}
+          </select><div class="hint">Books with no copies on the shelf are greyed out — reserve them instead.</div></div>
+        <div class="field"><label for="issue_date">Issue date <span class="req">*</span></label>
+          <input id="issue_date" name="issue_date" type="date" value="{{ form.issue_date }}" max="{{ today }}" required data-loan-days="{{ settings.loan_days }}"></div>
+        <div class="field"><label for="due_date">Due date <span class="req">*</span></label>
+          <input id="due_date" name="due_date" type="date" value="{{ form.due_date }}" required>
+          <div class="hint">Default loan period: {{ settings.loan_days }} days (change it in Settings).</div></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit"><i class="fa-solid fa-check"></i> Issue book</button>
+        <a class="btn secondary" href="{{ url_for('loans') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <h3><i class="fa-solid fa-scale-balanced"></i> Lending rules in force</h3>
+    <ul class="list small">
+      <li>Maximum <strong>{{ settings.max_loans }}</strong> books per member</li>
+      <li>Fine: <strong>{{ settings.fine_per_day|rupees }}</strong> per overdue day</li>
+      <li>Members with overdue books {{ "cannot" if settings.block_overdue else "can" }} borrow more</li>
+      <li>Reservations are served first come, first served</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

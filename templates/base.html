@@ -1,0 +1,117 @@
+{% from "_macros.html" import csrf with context %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title|default("Dashboard") }}{% endblock %} · {{ library_name }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/book-placeholder.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% set ep = request.endpoint or "" %}
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-logo"><i class="fa-solid fa-book-open-reader"></i></span>
+      <span class="brand-name">{{ library_name }}<span class="brand-sub">Library Management</span></span>
+    </a>
+    <nav class="nav">
+      <div class="nav-label">Overview</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <div class="nav-label">Catalogue</div>
+      <a href="{{ url_for('books') }}" class="{{ 'active' if ep.startswith('book') }}"><i class="fa-solid fa-book"></i> Books</a>
+      <a href="{{ url_for('categories') }}" class="{{ 'active' if ep.startswith('categor') }}"><i class="fa-solid fa-tags"></i> Categories</a>
+      <a href="{{ url_for('members') }}" class="{{ 'active' if ep.startswith('member') }}"><i class="fa-solid fa-users"></i> Members</a>
+      <div class="nav-label">Circulation</div>
+      <a href="{{ url_for('issue_book') }}" class="{{ 'active' if ep == 'issue_book' }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Issue book</a>
+      <a href="{{ url_for('loans') }}" class="{{ 'active' if ep in ('loans', 'return_book') }}"><i class="fa-solid fa-arrows-rotate"></i> Loans &amp; returns</a>
+      <a href="{{ url_for('overdue') }}" class="{{ 'active' if ep == 'overdue' }}"><i class="fa-solid fa-clock"></i> Overdue
+        {% if overdue_count %}<span class="count">{{ overdue_count }}</span>{% endif %}</a>
+      <a href="{{ url_for('reservations') }}" class="{{ 'active' if ep.startswith('reservation') }}"><i class="fa-solid fa-bookmark"></i> Reservations</a>
+      <div class="nav-label">Administration</div>
+      <a href="{{ url_for('reports') }}" class="{{ 'active' if ep.startswith('report') }}"><i class="fa-solid fa-chart-column"></i> Reports</a>
+      <a href="{{ url_for('settings') }}" class="{{ 'active' if ep == 'settings' }}"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-foot">LibraryHub · college mini-project<br>Admin-managed system</div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+      <h1>{% block heading %}{{ page_title|default("Dashboard") }}{% endblock %}</h1>
+      <form class="top-search" action="{{ url_for('books') }}" method="get" role="search" data-no-loading>
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" name="q" placeholder="Search books by title, author or ISBN…" aria-label="Search books">
+      </form>
+      <div class="top-actions">
+        <div class="dropdown">
+          <button class="icon-btn" type="button" data-toggle-menu="notif-menu" aria-label="Notifications" aria-expanded="false">
+            <i class="fa-regular fa-bell"></i>{% if overdue_count %}<span class="dot">{{ overdue_count }}</span>{% endif %}
+          </button>
+          <div class="menu" id="notif-menu">
+            <div class="menu-title">Overdue alerts</div>
+            {% for l in overdue_alerts %}
+              <a href="{{ url_for('return_book', loan_id=l.id) }}"><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i>
+                <span><strong>{{ l.book_title }}</strong><br><span class="small muted">{{ l.member_name }} · {{ l.days_overdue }} day(s) late</span></span></a>
+            {% else %}<div class="empty-note">No overdue books. 🎉</div>{% endfor %}
+            {% if overdue_count %}<hr><a href="{{ url_for('overdue') }}">View all {{ overdue_count }} overdue</a>{% endif %}
+          </div>
+        </div>
+        <div class="dropdown">
+          <button class="profile-btn" type="button" data-toggle-menu="profile-menu" aria-expanded="false">
+            <span class="avatar">{{ admin_username[:1] }}</span><span class="pname">{{ admin_username }}</span><i class="fa-solid fa-chevron-down small"></i>
+          </button>
+          <div class="menu" id="profile-menu">
+            <div class="menu-title">Signed in as {{ admin_username }}</div>
+            <a href="{{ url_for('settings') }}"><i class="fa-solid fa-gear"></i> Settings &amp; password</a>
+            <hr>
+            <form method="post" action="{{ url_for('logout') }}" data-no-loading>{{ csrf() }}
+              <button class="menu-item" type="submit"><i class="fa-solid fa-right-from-bracket"></i> Log out</button></form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flashes" role="status" aria-live="polite">
+      {% for category, message in messages %}
+      <div class="flash {{ category }}">
+        <i class="fa-solid {{ 'fa-circle-check' if category == 'success' else 'fa-circle-exclamation' if category == 'error' else 'fa-circle-info' }}"></i>
+        <div class="msg">{{ message }}</div>
+        <button class="close" type="button" aria-label="Dismiss">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <main class="content">
+      {% if settings and settings.demo_data %}
+      <div class="alert info"><i class="fa-solid fa-flask"></i><div><strong>Demo data.</strong> This database was filled by <code>seed.py</code> with sample (fictional) books and members.</div></div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">{{ library_name }} · &copy; {{ current_year }} · Built with Flask &amp; SQLite</footer>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="modal">
+    <div class="modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <h2 id="confirm-title">Please confirm</h2>
+    <p id="confirm-text" class="muted"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn secondary" id="confirm-cancel">Cancel</button>
+      <button type="button" class="btn danger" id="confirm-ok">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

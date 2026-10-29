@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+instance/*.sqlite3
+instance/*.sqlite3-journal
+instance/*.sqlite3-wal
+instance/*.sqlite3-shm
+!instance/.gitkeep
